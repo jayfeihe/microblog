@@ -3,6 +3,7 @@
   <component name="Encoding" native2AsciiForPropertiesFiles="true" defaultCharsetForPropertiesFiles="UTF-8">
     <file url="file://$PROJECT_DIR$" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/common/config.js" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/public/javascripts/jquery-1.11.1.min.js" charset="GBK" />
     <file url="file://$PROJECT_DIR$/views/footer.ejs" charset="GBK" />
     <file url="PROJECT" charset="UTF-8" />
   </component>

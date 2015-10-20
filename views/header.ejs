@@ -36,8 +36,9 @@
                 <% if(!user) {%>
                 <li><a href="/login">登入</a></li>
                 <li><a href="/reg">注册</a></li>
-                <li><a href="/publish">发微博</a></li>
                 <% } else {%>
+                <li><a href="/publish">发微博</a></li>
+                <li><a href="/blog/own">查看已发布微博</a></li>
                 <li><a href="/logout">登出</a></li>
                 <% } %>
             </ul>

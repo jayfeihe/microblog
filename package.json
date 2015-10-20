@@ -15,8 +15,14 @@
     "serve-favicon": "~2.3.0",
     "mongoose": "^4.1.10",
     "morgan": "^1.6.1",
-    "express-session":"*",
-    "connect-mongo":"*",
-    "connect-flash":"*"
+
+    "express-useragent": "*",
+    "connect": "*",
+    "cookie-session": "*",
+    "csurf": "*",
+    "querystring": "*",
+    "request": "*",
+    "cookies": "*",
+    "express-session": "~1.0.4"
   }
 }

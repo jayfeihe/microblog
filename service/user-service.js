@@ -67,8 +67,11 @@ function UserService(){
         User.login(req.body.username,password,function(err,user){
             if(user!=''){
                 console.log('登录成功！');
+
+                req.session.user=req.body.username;
+
                 res.render('index',{ title: '首页' ,
-                    user:'',
+                    user:req.session.user,
                     success:'登录成功',
                     error:'',
                     posts:[]});

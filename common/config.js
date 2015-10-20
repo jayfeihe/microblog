@@ -13,7 +13,7 @@ var config = {
     ownerSkill: '',//主要从事领域与技能，显示在博主信息中
     motto: 'Thoughts, stories and ideas.',//座右铭，显示在博主信息中
     email: '871825513@qq.com',
-    cookieSecret: 'microblogyuanzm',
+    cookieSecret: 'microblojay',
     serverPlatform: {
         platform: 'local',
         AccessKey: 'xxx',//platform是local可以不填

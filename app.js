@@ -12,8 +12,8 @@ var mongoose = require('mongoose');
 
 var app = express();
 
-var flash = require('connect-flash');
 var session = require("express-session");
+var MongoStore = require('connect-mongo')(session);
 
 //自定义加载配置模块
 var config = require('./common/config');
@@ -31,30 +31,18 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-//-------------------新加内容--------------
-//app.use(session({
-//  secret:config.cookieSecret,
-//  store:new MongoStore({
-//    db:config.dbName
-//  }),
-//  resave:true,
-//  saveUninitialized:true
-//}));
+//-------------------新加内容,添加session的支持--------------
+app.use(session({
+  secret:config.cookieSecret,
+  key:config.dbName,
+  //cookie:{maxAge:1000*30},
+  cookie:{maxAge:1000*60*60*24*30}, //设置session有效期为30天,session会存储到mongodb的sessions集合中，过了有效期会自动删除，可以放到redis等缓存中
+  store:new MongoStore({db:config.dbName}),
+  resave:true,
+  saveUninitialized: true,
+  rolling:false
+}));
 
-//获取状态
-//app.use(function(req,res,next){
-//  console.log("app.usr local");
-//  res.locals.user = req.session.user;
-//  res.locals.post = req.session.post;
-//  var error = req.flash('error');
-//  res.locals.error = error.length?error:null;
-//
-//  var success = req.flash('success');
-//  res.locals.success = success.length?success:null;
-//
-//  next();
-//});
-//app.use(flash());
 //-----------------------------------------
 
 
