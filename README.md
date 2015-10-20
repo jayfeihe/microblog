@@ -54,6 +54,7 @@ views
        修改package.json的mongodb和connect-mongo参数
               "mongodb": "^2.0.45",
               "connect-mongo":"0.8.2",
+              
 
 
 
