@@ -1,0 +1,1177 @@
+mongoose官网：http://mongoosejs.com/
+
+1.Node.js guide 笔记
+    1.读取文件
+       app.js
+       var express = require('express'),
+           routes = require('./routes'),
+           fs = require('fs');
+
+       app.get('/',routes.index);
+
+       //通过url读取一个html文件
+       app.get('/form',function(req, res){
+       fs.readFile('./form.html',function(err,content){
+       if(err){
+       res.writeHead(500);
+       res.end();
+       }else{
+       res.writeHead(200,{'Content-type':'text/html'});
+       res.end(content,,'utf-8');
+       }
+       });
+       });
+
+    2.关于异步式回调函数：
+            程序的执行不会因IO相关的操作而阻塞，而是立刻执行剩余的程序，当IO相关的操作异步执行完毕后，通过回调函数的形式在原程序中执行
+       eg:
+       setTimeout(function() {console.log('first or second');}
+       , 5000);
+       console.log('we will see');
+
+       解析：
+             这里设置5000ms后执行定义的函数，
+             在node.js中，该过程不会被阻塞5000ms，而是会先执行函数后面的内容，然后在5000ms之后，通过回调的方式，去执行该函数
+    3.Express中处理get和post
+         1.获取get参数    req.query.param
+         2.获取psot参数   req.body.param
+         eg：注册  post方式
+          app.post('/signup',function(req,res){
+          var username = req.body.username;
+          var password = req.body.password;
+          User.addUser(username,password,function(err,user){
+          if(err) throw err;
+          res.redirect('/form');
+          });
+          })
+    3.mongoose访问数据库MongoDB    ---   mongoose官网  http://mongoosejs.com/docs/index.html
+         1.连接数据库
+                     mongoose.connect('mongodb://username:password@host:port/database?options...');
+                 说明：
+                      1、windows下先启动mongodb
+                         E:\mongodb\bin>mongod --dbpath=E://mongodb/db
+                      2、使用mongo客户端连接数据库，创建用户名和密码
+                         show dbs;
+                         use database;
+                         //创建用户
+                         db.createUser( { user: "root", pwd: "1234", roles: [ "readWrite", "dbAdmin" ] } )
+                         //创建密码
+                         db.auth("root","1234");
+
+
+         1.db.js  --- 连接数据库
+             var mongoose = require('mongoose');
+             var Shcema = mongoose.Schema;
+
+             module.exports.mongoose = mongoose;
+             module.exports.Schema = Schema;
+
+             //连接数据库
+             var username = 'user';
+             var password= 'password';
+             var url = 'mongodb://'+username+':'+password+'@localhost:27017/dbname';
+             connect();
+
+             //连接数据库
+             function connection(){
+             mongoose.connect(url);
+             }
+
+             //断开数据库连接
+             function disconnect(){
+             mongoose.disconnect();
+             }
+
+
+         2.User.js : 定义Schema    --- 即定义存储对象集合的数据结构
+
+             var db = require('../common/db');
+
+             //定义对象集合的数据结构
+             var UserSchema = new db.Schema({
+                 username:{type:String, unique:true},
+                 password:{type:String}
+             });
+
+             var User = db.mongoose.model('User',UserSchema);
+
+             //定义对象的操作  --- 如果出错，把错误发给callback，没错则将创建的对象发送给callback处理
+             function addUser(username,password,callback){
+             var user = new User();
+             user.username = username,
+             user.password = password;
+             user.save(function(err){
+             if(err){
+             callback(err);
+             }else{
+             callback(null,user);
+             }
+             });
+             }
+
+             //Exports
+             module.exports.addUser = addUser;
+
+
+         3.mongodb的常见操作
+             eg： 最简单的CRUD
+             1.定义对象集合的结构      blog.js
+             var mongoose  = require('mongoose'),
+                 Schema = mongoose.Schema;
+
+                 mongoose.connection('mongodb://localhost/test');
+
+             var BlogSchema = new Schema({
+                 id:{type:Number, index:true},
+                 title:{type:String}
+             });
+
+             module.exports = mongoose.model('blog',BlogSchema);
+
+             2.CRUD操作  test.js
+             var Blog = require('./blog');
+
+             function save(){
+                var blog = new Blog();
+                blog.id = 1;
+                blog.title = 'jay';
+                blog.save(err){
+                if(err){
+                console.log('save failed');
+                }
+                console.log('save success');
+                }
+             }
+
+             function find(){
+                //查询id为1的记录
+                Blog.find({id:1},function(err,docs,callback){
+                if(err){
+                console.log('查询失败');
+                callback(err);
+                }else{
+                console.log(docs);
+                console.log('查询成功');
+                //将查询结果给callback回调函数处理
+                callback(null,docs);
+                }
+                });
+             }
+
+             function update(){
+                Blog.update({id:1,title:'Success'},function(err,docs){
+                 console.log(docs);
+                 console.log('update success');
+                });
+             }
+
+             function delete(){
+                Blog.delete({id:1},function(err,docs){
+                console.log(docs);
+                console.log('remove success');
+                })
+             }
+
+
+2.关于Mongoose
+      1.Mongoose支持的数据类型
+          String        --   字符串
+          Number        --   数字，包括整数和小数
+          Date          --   日期
+          Boolean       --   布尔
+          Buffer        --   用于存储二进制数据，eg：图片，最大不超过16M
+          ObjectId      --   mongodb自动生成_id,作为数据库的主键
+          Mixed         --   可以存储任意的数据类型
+          Array         --   数组或内置子文档(subdocuments)
+
+      说明：
+          Array类型的两种用法：
+             1.array数组数据
+                 eg：
+                    var UserSchema = new mongoose.Schema({
+                    name:String ,
+                    email:[String]
+                    });
+
+             2.内置subdocuments
+                 eg：
+                    var EmailSchema = new mongoose.Schema({
+                    email:String,
+                    regTime: Date
+                    });
+
+                    var UserSchema = new mongoose.Schema({
+                    name:String,
+                    email:[emailSchema]
+                    });
+
+             3.Mongoose的用法
+                 eg：
+                   1.定义Schema结构
+
+                    var UserSchema = new mongoose.Schema({
+                    name:{type:String ,unique:true, index:true} ,
+                    email:{type:String , unique:true} ,
+                    regTime:{type:Date , default:Date.now } ,
+                    modifiedTime: Date,
+                    lastLogin: Date
+                    });
+
+
+                   2.Model --- 与MongoDB的document一一对应
+                            schema打包成model，model会自动生成所有的  增(save)、删(delete)、改(update)、查(find,findOne,findById)  方法
+                     生成一个Model
+                          mongoose.model('User',UserSchema)
+
+                     eg:
+                        查询年龄在21~65岁之间的User
+                                var User = require('./user');
+
+                                User.find({age:{$gte:21, $lte:65}},callback);
+                            <=等价于=>
+                                User.where('age').gte(21).lte(65).exec(callback);
+
+                   3.Mongoose的一些常用查询方法
+                         Model.find
+
+                         Mongoose 模型提供了 find, findOne, 和 findById 方法用于文档查询。
+
+                         Model.find
+
+                         Model.find(query, fields, options, callback)
+                         // fields 和 options 都是可选参数
+                         简单查询
+
+                         Model.find({ 'csser.com': 5 }, function (err, docs) { // docs 是查询的结果数组 });
+                         只查询指定键的结果
+
+                         Model.find({}, ['first', 'last'], function (err, docs) {
+                           // docs 此时只包含文档的部分键值
+                         })
+                         Model.findOne
+
+                         与 Model.find 相同，但只返回单个文档
+
+                         Model.findOne({ age: 5}, function (err, doc){
+                           // doc 是单个文档
+                         });
+                         Model.findById
+
+                         与 findOne 相同，但它接收文档的 _id 作为参数，返回单个文档。_id 可以是字符串或 ObjectId 对象。
+
+                         Model.findById(obj._id, function (err, doc){
+                           // doc 是单个文档
+                         });
+                         Model.count
+
+                         返回符合条件的文档数。
+
+                         Model.count(conditions, callback);
+                         Model.remove
+
+                         删除符合条件的文档。
+
+                         Model.remove(conditions, callback);
+                         Model.distinct
+
+                         查询符合条件的文档并返回根据键分组的结果。
+
+                         Model.distinct(field, conditions, callback);
+                         Model.where
+
+                         当查询比较复杂时，用 where：
+
+                         Model
+                         .where('age').gte(25)
+                         .where('tags').in(['movie', 'music', 'art'])
+                         .select('name', 'age', 'tags')
+                         .skip(20)
+                         .limit(10)
+                         .asc('age')
+                         .slaveOk()
+                         .hint({ age: 1, name: 1 })
+                         .run(callback);
+                         Model.$where
+
+                         有时我们需要在 mongodb 中使用 javascript 表达式进行查询，这时可以用 find({$where : javascript}) 方式，$where 是一种快捷方式，并支持链式调用查询。
+
+                         Model.$where('this.firstname === this.lastname').exec(callback)
+                         Model.update
+
+                         使用 update 子句更新符合指定条件的文档，更新数据在发送到数据库服务器之前会改变模型的类型。
+
+                         var conditions = { name: 'borne' }
+                           , update = { $inc: { visits: 1 }}
+                           , options = { multi: true };
+
+                         Model.update(conditions, update, options, callback)
+                         注意：为了向后兼容，所有顶级更新键如果不是原子操作命名的，会统一被按 $set 操作处理，例如：
+
+                         var query = { name: 'borne' };
+                         Model.update(query, { name: 'jason borne' }, options, callback)
+
+                         // 会被这样发送到数据库服务器
+
+                         Model.update(query, { $set: { name: 'jason borne' }}, options, callback)
+                         查询 API
+
+                         如果不提供回调函数，所有这些方法都返回 Query 对象，它们都可以被再次修改（比如增加选项、键等），直到调用 exec 方法。
+
+                         var query = Model.find({});
+
+                         query.where('field', 5);
+                         query.limit(5);
+                         query.skip(100);
+
+                         query.exec(function (err, docs) {
+                           // called when the `query.complete` or `query.error` are called
+                           // internally
+                         });
+
+
+                   4.Node.js+Mongoose实现分页的原理
+
+                         var mongoose = require(“mongoose”);
+                         mongoose.connect(“mongodb://localhost/adb”); //连接mongodb
+                         var model = mongoose.model(‘myCollection’,{title:String});
+
+                         var start = 1;  //可改为接受参数后计算出的值
+                         var pageSize = 10; //每页显示条数
+                         model.find(options).skip(start).limit(pageSize).exec(function(err,datas){
+                         //do something for your page
+                         //datas是分页后的数据
+                         })
+
+                         注意：
+                                start = (页数-1)*pageSize
+
+
+
+3.Node.js即学即用笔记
+
+          Node.js适合处理  高并发、IO密集、少量业务逻辑的场景
+             eg:
+                1.Restful API
+                           这是适合Node的理想情况，可构建它来处理数万条连接，它仍然不需要大量逻辑，本质上只是从某个数据库中查找一些值将它们组成一个响应。
+                           由于响应时少量文本，入站请求也是少量文本，流量不高，一台机器就每秒可以处理几万个API请求连接
+                2.实时程序 、聊天
+                3.单页APP
+
+          客户端通过telnet连接
+                              telnet 127.0.0.1 8888
+
+          1.使用Node.js创建聊天服务器
+
+            /*创建一个聊天服务器*/
+            var net = require('net');
+
+            var chatServer = net.createServer();
+
+            chatServer.on('connection',function(client){
+            client.write('Hi\n');
+            client.end('Bye!\n');
+            });
+            chatServer.listen(8888);
+
+          解析：
+               1.net模块，包含了node需要的所有TCP功能
+               2.net.createServer()  --- 创建一个新的TCP服务器
+               3.chatServer.on()方法  --- 添加一个事件监听器，
+                  每当有新的客户端通过网络连接接入服务器，就会触发connection事件，事件监听器就会调用指定的函数
+               4.连接事件在调用回调函数时，会传递一个TCP socket对象的引用  -- client
+               5.client使用write()发送信息给客户端，end()方法关闭连接
+               6.listen()方法指定监听端口
+
+
+
+           2. 获取并处理连接客户端发来的信息  -- 服务器接收客户发来的消息，并原样打出
+
+                        var net = require('net');
+
+                        var chatServer = net.createServer();
+
+                        chatServer.on('connection',function(client){
+                        client.write('Hi\n');
+                        client.on('data',function(data){
+                        console.log(data.toString());
+                        });
+                        });
+                        chatServer.listen(8888);
+          解析：
+                 1.client.on('data',function(data){})  ---  接收客户发来的消息
+                     这里对接收到的消息进行原样输出
+                   eg：
+                      使用telnet方式进行访问聊天服务器
+                        >telnet 127.0.0.1 8888
+                        >hello
+                      服务器端输出：
+                         hello
+
+
+
+          3.处理客户端之间的通信  ---  聊天室模式  ： 即一个人发消息，所有人连接到服务器的人都能收到
+
+                       var net = require('net');
+
+                       //创建一个服务器
+                       var chatServer = net.createServer();
+                       //创建连接的客户端列表
+                       var clientList = [];
+
+                       chatServer.on('connection',function(client){
+                       client.write('您，已连接到聊天服务器');
+                       //每个连接都加入到客户端列表
+                       clientList.push(client);
+
+                       //监听到消息事件时，转发给所有连接到服务器的客户端
+                       client.on('data',function(data){
+                           for(var i=0;i<clientList.length;i++){
+                               clientList[i].write(data.toString());
+                           }
+                       });
+                       });
+
+                       chatServer.listen(8888);
+
+                 解析：
+                      服务器未记录它收到的任何消息，而是把连接到的客户端列表轮询一遍，并发消息发给所有客户端
+
+
+          4.处理客户端之间的通信  --- 一对多模式： 自己发的消息，供其他人接收显示   ---  改进消息发送
+
+                         var net = require('net');
+
+                         //创建一个服务器
+                         var chatServer = net.createServer();
+                         //创建连接的客户端列表
+                         var clientList = [];
+
+                         chatServer.on('connection', function(client){
+                         client.name = client.remoteAddress+":"+client.remotePort;
+                         client.write('Hi,'+client.name+'您，已登录服务器');
+
+                         //将新连接的客户端加入列表
+                         clientList.push(client);
+
+                         client.on('data',function(data){
+                             broadcast(data, client);
+                         });
+
+                         //向指定的client客户端发送消息
+                         function broadcast(message, client){
+                         for(var i=0;i<clientList.length;i++){
+                             if(client!=clientList[i]){
+                             clientList[i].write(client.name+' says '+message);
+                             }
+                         }
+                         }
+
+                         });
+
+                         chatServer.listen(8888);
+
+                  解析：
+                       1.为每个连接到服务器的客户端，设置一个name(IP:port的形式)来标记这个客户端
+                       2.定义broadcast(message, client)方法，给除自身之外的其他client客户端发送数据,同时加上消息来源
+
+                  特别注意：
+                       致命缺点：
+                           如果有一个客户端退出，则服务器的clientList列表中对应的该client在发送消息时将会出错，导致服务器崩溃
+                           注：telnet退出   Ctrl+]
+                           解决方法：
+                               1.保证在一个客户端断开是，把它从客户端列表中删除，防止它再调用write()方法，V8引擎也会把该Socket对象作为垃圾回收，并释放其内存
+                               2.采用更保险的方式调用write()方法  ---  确保Socket从上次被写入到现在，没有发生过任何阻碍我们调用write()方法的事
+
+                  5.改进，编写更健壮的聊天服务器
+                          chatServer.on('connection', function(client){
+                               client.name = client.remoteAddress+":"+client.remotePort;
+                               client.write('Hi,'+client.name+'您，已登录服务器');
+
+                               //将新连接的客户端加入列表
+                               clientList.push(client);
+
+                               client.on('data',function(data){
+                                   broadcast(data, client);
+                               });
+
+                               //先处理断开连接的客户端，把它从客户端列表中移除  --- 利用end事件完成 ---1.对于客户端的正常退出，从列表中移除，保证已断开的客户端不出现在列表中
+                               client.on('end',function(){
+                                   //调用Array.splice()将客户端从clientList列表中移除。Array.indexOf()方法用于找到客户端在列表中的位置，然后splice()把它从列表中移除
+                                   //下一个客户端调用broadcast方法时，已经断开的客户端将不会在出现在列表中了
+                                   clientList.splice(clientList.indexOf(client), 1);
+                               });
+
+                               //记录错误
+                               client.on('error',function(err){
+                                   console.log(err);
+                               })
+
+                               //为了更加保险，在调用broadcast函数时，检测下socket是否可写，以确保不会因为任何一个不可行的socket导致异常       ---  2.处理客户端的非正常退出
+                               //如果发现不可写的socket，还要通过Socket.destroy()方法将其关闭，并从clientList中移除
+                               function broadcast(message,client){
+                                   var cleanup = [];
+                                   for(var i=0;i<clientList.length;i++){
+                                   if(client!=clientList[i]){
+                                   if(clientList[i].writable){
+                                   clientList[i].write(client.name + " says " + message)
+                                   }else{
+                                   cleanup.push(clientList[i]);
+                                   clientList[i].destroy();
+                                   }
+                                   }
+                               }
+                               }
+
+                          });
+
+                     解析：
+                          为了保证安全的两个方面，处理客户端正常退出(end事件可监听到) 和 非正常退出(服务器中client的end事件监听不到)socket不可写 两种情况
+                             1.处理client的end事件    ---  客户端断开连接退出
+                               client.on('end',function(){
+                               //将该客户端从列表中删除
+                               });
+
+                             2.发送消息时，处理socket不可写
+                               if(clientList[i].writable){
+                               //socket可写，正常发送信息
+                               }else{
+                               //socket不可写，则将该socket加入cleanup列表，通过Socket.destroy()方法将其关闭
+                               cleanup.push(clientList[i]);
+                               clientList[i].destroy();
+                               }
+
+                               //每次调用broadcast后，清空cleanup列表，删除不可写的socket
+                               for(i=0;i<cleanup.length;i++){
+                               clientList.splice(clientList.indexOf(cleanup[i]),1);
+                               }
+
+
+4.编写健壮的Node程序
+
+          1.事件循环
+                     Node采用非阻塞(异步)IO模型和事件循环机制(回调函数)，在Node.js执行时维护着一个事件队列，程序在执行时进入事件循环等待下一个事件到来，
+                     每个异步I/O请求完成后都会被推送到事件队列中，等待执行
+
+                     事件循环： 指Node.js会把所有的异步操作使用事件机制解决，有个线程在不断地循环检测事件队列
+
+
+                     eg：
+                        db.query('SELECT * from some_table', function(res) {
+                        res.output();
+                        });
+                        query的第二个参数是一个回调函数，进程执行到db.query时不会等待结果返回，而是直接继续执行下面的语句，直到进入事件循环。
+                        当数据库执行结果返回时，会将事件发送到事件队列，等到线程进入事件循环后才会调用之前的回调函数
+
+
+                        Node.js的异步机制是基于事件的，所有的IO、网络通信、数据库查询都以非阻塞方式执行，返回结果由事件循环来处理。
+                        Node.js在同一时刻只会处理一个事件，完成后立即进入事件循环检测后面的事件，这样CPU和内存在同一时间集中处理一件事，同时尽量让耗时的IO等操作并行执行
+
+                        Node.js的底层有一个模块负责维护线程池，当一个IO请求发出的时候，Node.js的底层模块将新建一个线程来处理请求，完成后再将结果交还给上层。那么，当有多个请求的时候，Node.js的底层模块将利用尽可能少的线程来完成最多的任务，如果存在空闲的线程，它将继续被利用来做其他的事情，这对于前面说的针对每个请求开一个新的进程或线程而言，无疑“聪明”许多，也更加高效了
+
+                     Node从程序开始就进入事件循环，直到退出才结束事件循环，程序的入口就是初始事件的回调函数
+
+          2.异常处理
+                     1.通过error事件捕捉异常
+                     2.更好的方法：
+                                  对已知的错误条件设置好检查条件，并尽可能处理它们，并捕获错误，并记录下来
+                                  即：
+                                      callback(err,....){
+                                      if(err){
+                                      如果发生错误，在这里进行处理
+                                      }else{
+                                      //正常的逻辑流程
+                                      }
+                                      }
+
+                     eg:通过error事件捕捉IO异常
+                        var http = require('http');
+                         var opts = {
+                         host:'dsafdfdf.net',
+                         port:80,
+                         path:'/'
+                         }
+
+                         var req = http.get(opts, function(res){
+                          console.log('This will never get called ');
+                         });
+
+                         req.on('error', function(e){
+                           console.log('An error is occuring '+ e);
+                         });
+
+          3.使用多核处理器
+                     1.cluster模块
+                                  Node通过cluster模块，把任务分配给子进程，即：Node把当前程序复制了一份给另一个进程，每个子进程有些特殊的能力，eg：能够与其他子进程共享socket连接
+
+                         eg：使用cluster集群来分发任务
+                             var cluster = require('cluster');
+                             var http = require('http');
+                             //获取CPU核数
+                             var numCpus = require('os').cpus().length;
+
+                             if(cluster.isMaster){
+                              //创建工作进程
+                              for(var i=0;i<numCpus;i++){
+                              cluster.fork();
+                              }
+
+                              cluster.on('death', function(worker){
+                                 console.log('worker '+worker.pid +' died');
+                                 //出现死亡进程时，自动重启新进程
+                                 cluster.fork();
+                              });
+
+                             }else{
+                               //工作进程创建http服务器
+                               http.Server(function(req, res){
+                               res.writeHead(200);
+                               res.end('Hello world\n');
+                               }).listen(8888);
+                             }
+
+                         解析：
+                               cluster工作原理：
+                                       1.每个Node进程要么是主进程，要么是工作进程。当一个主进程调用cluster.fork()时，它会创建一个与主进程一模一样的子进程。
+                                       2.例子中：主进程为每个CPU创建了一个工作进程，每个子进程创建了一个HTTP服务器，这就是cluster另一个独特的地方，
+                                       在使用cluster的地方使用listen()监听一个socket的时候，多个进程可同时监听同一个socket.
+                                       3.cluster提供了跨平台时让多个进程共享socket的方法，即使多个子进程在共享一个端口上的连接，其中一个阻塞了，也不会影响其他工作进程的新连接
+                                       4.工作进程挂掉时，自动重启
+                                           cluster.on('death', function(worker){
+                                                console.log('worker '+worker.pid +' died');
+                                                //出现死亡进程时，自动重启新进程
+                                                cluster.fork();
+                                             });
+
+
+                         通过消息传递来监控工作进程状态
+                              var cluster = require('cluster');
+                              var http = require('http');
+                              var numCpus = require('os').cups().length;
+
+                              var rssWarn = (12*1024*1024) ,
+                                  heapWarn = (12*1024*1024)
+
+                              if(cluster.isMaster){
+                              for(var i=0;i<numCpus;i++){
+                              var worker = cluster.fork();
+                              worker.on('message', function(m){
+                              if(m.memory){
+                              if(m.memory.rss>rssWarn){
+                              console.log('Worker '+m.process +' using too much memory.');
+                              }
+                              }
+                              });
+                              }
+                              }else{
+                              //服务器
+                              http.Server(function(req, res){
+                              res.writeHead(200);
+                              res.end('Hello world \n');
+                              }).listen(8888);
+
+                              //每秒报告一次状态
+                              setInterval(function report(){
+                              process.send({memory:process.memoryUsage(), process:process.pid});
+                              },1000);
+                              }
+
+                         解析：
+                              1.检测系统监控状态   ---  工作进程每秒报告一次自己的内存使用量，当子进程使用了过多内存时，主进程会发送一条警告到日志中去。
+                              2.这让Node主进程有控制的能力
+                              3.这个消息传递接口也允许主进程把消息发回给工作进程   ---   你可把主进程当成工作进程的一个轻量级控制接口
+
+
+
+
+
+
+
+
+5.Node.js的核心模块
+        1.Events模块
+                       var events  = require('events');
+                       var EventEmitter = events.EventEmitter;
+
+               EventEmitter  --- 提供基础的事件功能，所有的Node事件功能围绕着EventEmitter，它的设计包含了其他类扩展所需要的接口类，EventEmitter对象通常不会直接调用
+               EventEmitter类提供了一系列方法
+                  on(event_name,callback(arg1,arg2,...))            ---     为一个事件(event_name)创建监听器，并设置回调函数
+                                   on方法接受两个参数：
+                                                      需要监听的事件名称   和  当时机触发时需要调用的callback回调函数
+
+                                   eg:
+                                     server.on('event',function(a,b,c){
+                                     //具体操作
+                                     })
+
+                  emit(event_name,arg1,arg2,...)                    ---     发射一个事件(event_name)，并传递参数
+                                   emit方法接受两个参数：
+                                                       发射的事件名称   和   发射事件时传递给监听者的若干参数内容
+
+                                   eg:
+                                     server.emit('event', a,b,c);
+
+               EventEmitter是一个接口，从EventEmitter继承的类需要使用new关键字来构造
+
+               通过util模块的inherits来继承EventEmitter，构造子类
+
+                  eg：
+                      var utils = require('util');
+                      var EventEmitter = require('events').EventEmitter;
+
+                      var Server = function(){
+                      console.log('Server init');
+                      }
+
+                      //通过utils.inherits，让Server继承EventEmitter
+                      utils.inherits(Server, EventEmitter);
+
+                      var s = new Server();
+
+                      //监听事件
+                      s.on('abc', function(a,b,c){
+                      console.log('监听到事件 abc ，收到事件传递的参数:'+a+'\t'+b+'\t'+c);
+                      })
+
+                      //发射事件
+                      s.emit('abc','aa','bb','cc');
+
+
+
+        2.HTTP模块
+                      var http  = require('http');
+                      http.createServer();
+
+                      http.get('/url',function(req, res){
+                      //http处理
+                      })
+
+                      http.on('request/connection/close',function(){
+                      //不同事件的处理
+                      })
+
+                      http.listen(port,[ip]);
+
+
+                      1.HTTP服务器
+
+                           Node.js的核心功能之一就是作为Web服务器，Node实现的HTTP模块时非阻塞的、速度非常快
+
+                           http.createServer()   ---  构建新的HTTPServer类的实例，可以为新的类定义Node接收到HTTP请求时的操作
+                           eg：
+                              require('http').createServer(function(req,res){res.writeHead(200, {});
+                              res.end('hello world');}).listen(8125);
+                           或：
+                              var http = require('http');
+                              var server = http.createServer();
+                              var handleReq = function(req,res){
+                              res.writeHead(200, {});
+                              res.end('hello world');
+                              };
+                              server.on('request', handleReq);
+                              server.listen(8125);
+
+
+                           http服务器支持的几种事件
+                              connection         ---   TCP连接建立
+                              close              ---   TCP连接关闭
+                              request            ---   新的HTTP请求
+                              checkContinue      ---   一个特殊事件，当客户端以数据流方式将数据发送给服务器时，你可以对HTTP请求进行更直接的控制。
+                                                       客户端发送数据给服务器时，需要检查当前状态能否继续，这就会触发此事件。
+                                                       如果这个事件绑定了事件处理器，则request请求就不会被触发
+                              clientError        ---   把客户端发送的error事件传递出来
+
+                           eg:httpsniffer.js监听服务器对象发出的事件
+
+                              //这个类用于监听HTTP服务器对象发出的所有事件，演示了HTTP服务器对象的工作原理
+                              //Node中的HTTP服务器对象是一个EventEmitter，HTTP Sniffer所做的只是监听每个服务器事件，然后输出每个事件的相关信息
+                              var util = require('util');
+                              var url = require('url');
+
+                              var sniffon = function(server){
+                                  server.on('request',function(req, res){
+                                   util.log('e_request');
+                                   util.log(reqToString(req));
+                                  });
+
+                                  server.on('close', function(errno){
+                                   util.log('e_close errono '+errno);
+                                  });
+
+                                  server.on('checkContinue', function(req, res){
+                                   util.log('e_checkContinue');
+                                   util.log(reqToString(req));
+                                   res.writeContinue();
+                                  });
+
+                                  server.on('clientError', function(){
+                                   util.log('e_clientError');
+                                  });
+
+                                  server.on('connection', function(req, res){
+                                   util.log('e_connection');
+                                  });
+                              }
+
+                              var reqToString = function(req){
+                              var ret = 'request '+req.method +' '+req.httpVersion+' '
+                              +req.url+'\n ';
+
+                              ret += JSON.stringify(url.parse(req.url, true))+'\n';
+
+                              var keys = Object.keys(req.headers);
+                              for(var i=0;i<keys.length;i++){
+                              var key = keys[i];
+                              ret += i+'\t '+key+':'+req.headers[key]+'\n';
+                              }
+                              if(req.trailers){
+                              ret+=req.trailers+'\n';
+                              }
+
+                              return ret;
+                              }
+
+                              exports.sniffon=sniffon;
+
+
+                           server.js 服务器  --  当有客户端连接服务器时，所有服务器发生的事件都可在sniffon中展示出来
+                              var http = require('http');
+                              var sniffer = require('./httpsniffer');
+
+                              var server = http.createServer(function(req, res){
+                              res.writeHead(200,{'Content-type':'text/plaint'});
+                              res.end('Hello world \n');
+                              });
+
+                              sniffer.sniffon(server)
+                              server.listen(3000);
+
+
+
+                      2.HTTP客户端
+                                    ---   向远程服务器发起HTTP连接       ----   http.ClientRequest类
+                                                      eg： Web Service , 连接到数据库, 或抓取网页
+
+                                    两个工厂方法：
+                                                   通用方法   --  http.request(opts, function(res))
+                                                   便捷方法   --  http.get(opts,function(res))
+
+                                    ---  获取到的服务器响应              ----   http.ClientResponse类
+
+
+
+                               1. 通用方法创建HTTP请求
+                                       var http = require('http');
+
+                                       var opts = {
+                                       host:'wwww.baidu.com',
+                                       port:80,
+                                       path:'/',
+                                       method:'GET'
+                                       }
+
+                                       //返回一个http.ClientRequest类   即此处的  req
+                                       var req = http.request(opts, function(res){
+                                       res.setEncoding('uft8');
+                                       res.on('data', function(data){
+                                       console.log(data);
+                                       });
+                                       });
+
+                                       req.end();
+
+                                    解析：
+                                       1、 opts    ---   配置对象
+                                                 host：  IP或请求域名
+                                                 port：  请求端口     http默认是80，https默认是443
+                                                 path：  域名下的请求路径
+                                                 method：请求方式   可选，默认是GET
+
+                                       2、使用配置对象创建一个http.ClientRequest实例    ---  调研http.request()方法，并传入opts对象和回调函数(可选)
+                                               var req = http.request(opts,callback(res){});
+                                               这里的req  是一个 http.ClientRequest对象
+
+                                       3.传入的回调函数会监听response 事件，并在接收到response 事件时，处理request 的数据，
+                                         HTTP 请求的正文内容实际上是通过response 对象的数据流获得的。而且你可以订阅response 对象的data 事件，以便于数据可用时就能处理
+
+                                       4.req.end()方法，结束该请求。
+                                                   因为这是一个GET 请求，所以我们并不会往服务器发送任何数据。但对于其他的HTTP 方法，比如PUT 或POST，
+                                                   你可能需要发送数据。request 会等待end() 方法调用后，才初始化HTTP请求，因为在那之前，它不确定我们是否还会发送数据
+
+                                       5.res.setEncoding('uft8');   --- on('data',function(data){}) 得到的data是Buffer类型的，用于存储二进制，需要设置编码才能正确输出
+
+
+
+
+                               2.便捷方式的HTTP GET请求     http.get(opts,callback)  --- opts中把method属性从配置对象中去掉了，还把request.end() 也移除了，因为这些都已经隐含说明了
+
+                                        eg:
+                                          var http = require('http');
+
+                                          var opts = {
+                                          host:'wwww.baidu.com',
+                                          port:80,
+                                          path:'/'
+                                          }
+
+                                          //返回一个http.ClientRequest类   即此处的  req
+                                          var req = http.get(opts, function(res){
+                                          res.setEncoding('uft8');
+                                          res.on('data', function(data){
+                                          console.log(data);
+                                          });
+                                          });
+
+
+                               3.发送HTTP POST和PUT数据
+                                                       var req =  http.request(opts,function(res){})
+                                                       每当调用ClientRequest.write() 时，数据会马上上传（不会被缓存），但服务器在ClientRequest.end()调用之前是不会响应你的数据请求的
+                                                       可以把一个流（Stream）的data 事件和ClientRequest.write() 绑定在一起，这样就能把数据以流的形式发送给服务器
+
+                                        eg：为上传服务写入数据
+                                              var http = require('http');
+
+                                              var opts = {
+                                              host:'wwww.baidu.com',
+                                              port:80,
+                                              path:'/',
+                                              method:'POST'
+                                              }
+
+                                              var req =  http.request(opts,function(res){
+                                                res.setEncoding('uft8');
+                                                res.on('data', function(data){
+                                                console.log(data);
+                                                });
+                                              });
+
+                                              req.write('my data');
+                                              req.write('more of my data');
+
+                                              req.end();
+
+
+        3.URL
+               URL模块提供了解析和处理URL字符串的遍历工具，3个主要方法： parse(url,[true/false])、format和resolve
+                  var URL = require('url');
+
+               eg:URL模块解析URL
+
+                  > var URL = require('url');
+                  undefined
+                  > var myUrl = "http://www.nodejs.org/some/url/?with=query&param=that&are=awesome#aaaaaa";
+                  undefined
+                  > myUrl
+                  'http://www.nodejs.org/some/url/?with=query&param=that&are=awesome#aaaaaa'
+                  > parsedUrl = URL.parse(myUrl)
+                  { protocol: 'http:',
+                    slashes: true,
+                    auth: null,
+                    host: 'www.nodejs.org',
+                    port: null,
+                    hostname: 'www.nodejs.org',
+                    hash: '#aaaaaa',
+                    search: '?with=query&param=that&are=awesome',
+                    query: 'with=query&param=that&are=awesome',
+                    pathname: '/some/url/',
+                    path: '/some/url/?with=query&param=that&are=awesome',
+                    href: 'http://www.nodejs.org/some/url/?with=query&param=that&are=awesome#aaaaaa' }
+                  > parsedUrl = URL.parse(myUrl,true)
+                  { protocol: 'http:',
+                    slashes: true,
+                    auth: null,
+                    host: 'www.nodejs.org',
+                    port: null,
+                    hostname: 'www.nodejs.org',
+                    hash: '#aaaaaa',
+                    search: '?with=query&param=that&are=awesome',
+                    query:
+                     { with: 'query',
+                       param: 'that',
+                       are: 'awesome' },
+                    pathname: '/some/url/',
+                    path: '/some/url/?with=query&param=that&are=awesome',
+                    href: 'http://www.nodejs.org/some/url/?with=query&param=that&are=awesome#aaaaaa' }
+
+               解析：
+                   parse两个参数
+                                  url字符串
+                                  可选的布尔值，用来确定是否用querystring模块解析，默认false，不使用
+
+
+        4.querystring       处理字符串
+
+                    1.querystring 模块也被URL 模块用作辅助模块。特别是在解析URL 的时候，你可以指定URL 模块把query 字符串转换成对象返回给你，而不是给你一个简单的字符串
+                     eg:
+                       > var qs = require('querystring');
+                       > qs.parse('a=1&b=2&c=d');
+                       { a: '1', b: '2', c: 'd' }
+
+                     上面使用parse(url,true)时，query的内容
+                          query:
+                              { with: 'query',
+                                param: 'that',
+                                are: 'awesome' },
+
+                    2.encode()函数，把输入的key-value格式对象转成query字符串形式
+                     eg: 把对象编码成查询字符串
+                       > var myObj = {'a':1, 'b':5, 'c':'cats', 'func': function(){console.
+                       log('dogs')}}
+                       > qs.encode(myObj);
+                       'a=1&b=5&c=cats&func='
+
+
+
+        5.I/O模块
+
+                 1.数据流
+
+                 2.文件系统
+
+
+
+Node Web开发笔记
+
+       1.使用Mongoose操作MongoDB
+           1.note.js
+                var mongoose = require('mongoose'),
+                    Schema = mongoose.Schema,
+                    ObjectId = Schema.ObjectId;
+                var util = require('util');
+
+                var NoteSchema = new Schema({
+                    ts:{type:Date, default:Date.now },
+                    author:String ,
+                    note:String
+                });
+
+                module.exports = mongoose.model('Note', NoteSchema);
+
+           2.文档操作
+                1.添加文档
+                       1.--- 自带的save()方法
+                              var Note = require('../model/note');
+                              var newNote = new Note({
+                                 author: req.body.author,
+                                 note: req.body.note
+                               });
+
+                               newNote.save(function(err){
+                                 if(err){
+                                   console.log('便签保存失败');
+                                 }else{
+                                   console.log('便签保存成功');
+                                   res.redirect('/note/list');
+                                 }
+                       2.自定义保存
+                              exports.add = function(author, note, callback){
+                                 var newNote = new Note();
+                                 newNote.author = author;
+                                 newNote.note = note;
+
+                                 newNote.save(function(err){
+                                 if(err){
+                                   util.log('Fatal '+err);
+                                   callback(err);
+                                 }else{
+                                 callback(null);
+                                 }
+                                 });
+                              }
+
+                2.删除文档
+                       1.自带的remove方法
+                              //删除指定的note   --- 这种restful的url，通过req.params.xx 获取 ：xx 的参数值
+                              router.get('/delete/:id',function(req, res){
+                                Note.remove({_id:req.params.id},function(err){
+                                  if(err){
+                                    console.log('删除便签失败');
+                                  }else{
+                                    console.log('删除便签成功');
+                                    res.redirect('/note/list');
+                                  }
+                                })
+                              });
+
+
+                       2.自定义删除方法   ---  先findNoteById查找到后，再在回调函数中调用doc.remove()方法删除
+                              exports.delete = function(id,callback){
+                                exports.findNoteById(id, function(err, doc){
+                                  if(err){
+                                    callback(err);
+                                  }else{
+                                    util.log(util.inspect(doc));
+                                    doc.remove();
+                                    callback(null);
+                                  }
+                                });
+                              }
+
+                       3.查找文档
+                               1.查找全部
+                                       Note.find(function(err,doc){
+                                       //查找的所有文档存在doc中
+                                       })
+                               2.按id查找
+                                        Note.findOne({_id:id},function(err, doc){
+                                        callback(null, doc)
+                                        })
+                               3.按条件查找
+                                        Note.findOne({author:author},function(err, doc){
+                                        callback(null, doc)
+                                        })
+                       4.更新文档
+                               类似删除文档，需要先查询后，在回调函数中更新文档内容
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+<% include ../header.ejs %>
+
+<!--便签列表展示-->
+<% list.forEach(function(note,index){
+if(index%3 == 0){
+%>
+<div class="row">
+  <% } %>
+  <div class="col-sm-4">
+    <h2>
+      <a href="/note/view/<%= note._id %>"><%= note.author %></a>说
+    </h2>
+    <p><%= note.note %></p>
+    <p><a href="/note/delete/<%= note._id %>">删除</a></p>
+  </div>
+  <% if(index%3 == 2) {%>
+</div> <!-- end row -->
+<% } %>
+<% }) %>
+<% if(list.length % 3 != 0) {%>
+</div>  <!-- end row -->
+<% } %>
+
+<% include ../footer.ejs %>

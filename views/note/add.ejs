@@ -1,0 +1,27 @@
+<% include ../header.ejs %>
+
+<form class="form-horizontal" method="post">
+  <fieldset>
+    <legend>保存便签</legend>
+    <div class="form-group">
+      <label for="username" class="col-sm-2 control-label">作者</label>
+      <div class="col-sm-4">
+        <input type="text" class="form-control" id="author" name="author" placeholder="作者名称">
+        <p class="help-block">你的作者名称，用于展示</p>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="password" class="col-sm-2 control-label">内容</label>
+      <div class="col-sm-4">
+        <textarea rows="4" class="form-control" id="note" name="note" placeholder="请输入note便签内容"></textarea>
+      </div>
+    </div>
+    <div class="form-group" >
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-primary">提交</button>
+      </div>
+    </div>
+  </fieldset>
+</form>
+
+<% include ../footer.ejs %>

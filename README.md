@@ -24,9 +24,14 @@ views
           启动mongo客户端，创建数据库microblog
                         ./mongo
                         use microblog
+          创建连接到microblog的用户和密码   --- 在common/config.js中连接数据库时使用
+                        //创建用户
+                        db.createUser( { user: "root", pwd: "1234", roles: [ "readWrite", "dbAdmin" ] } )
+                        //创建密码
+                        db.auth("root","1234");
         2.修改setting.js文件
                         module.exports = {
-                           coolieSecret : 'microblogZJH',
+                           coolieSecret : 'microblogJay',
 	                   db:'microblog',
                       	   host:'localhost'
                            //host:'192.168.1.246'
